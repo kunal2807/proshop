@@ -1,19 +1,25 @@
 import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
 import { Row, Col, Image, ListGroup, Card, Button, Form } from 'react-bootstrap'
+import Loader from '../components/Loader'
+import Message from '../components/Message'
 import Rating from '../components/Rating'
-import axios from 'axios'
+import { listProductDetails } from '../redux/actions/productActions'
 
 const ProductScreen = ({ history, match }) => {
-  const [product, setProduct] = useState({})
+  const dispatch = useDispatch()
+  const productDetails = useSelector((state) => state.productDetails)
+  const { product, loading, error } = productDetails
+
+  const [qty, setQty] = useState(1)
 
   useEffect(() => {
-    const fetchProduct = async () => {
-      const { data } = await axios.get(`/api/products/${match.params.id}`)
-      setProduct(data)
-    }
-    fetchProduct()
-  }, [match])
+    dispatch(listProductDetails(match.params.id))
+  }, [dispatch, match])
+
+  const addToCartHandler = () => {
+    history.push(`/cart/${match.params.id}?qty=${qty}`)
+  }
 
   const renderProductDetail = (
     <Row className='py-4'>
@@ -58,12 +64,12 @@ const ProductScreen = ({ history, match }) => {
             {product.countInStock > 0 && (
               <ListGroup.Item>
                 <Row>
-                  <Col>Quantity</Col>
+                  <Col>Quantity: </Col>
                   <Col>
                     <Form.Control
                       as='select'
-                      // value={qty}
-                      // onChange={(e) => setQty(e.target.value)}
+                      value={qty}
+                      onChange={(e) => setQty(e.target.value)}
                     >
                       {[...Array(product.countInStock).keys()].map((x) => (
                         <option key={x + 1}>{x + 1}</option>
@@ -79,7 +85,7 @@ const ProductScreen = ({ history, match }) => {
                 className='btn btn-block'
                 type='button'
                 disabled={product.countInStock <= 0}
-                // onClick={addToCartHandler}
+                onClick={addToCartHandler}
               >
                 Add To Cart
               </Button>
@@ -90,7 +96,17 @@ const ProductScreen = ({ history, match }) => {
     </Row>
   )
 
-  return <>{renderProductDetail}</>
+  return (
+    <>
+      {loading ? (
+        <Loader />
+      ) : error || !product ? (
+        <Message variant='danger'>{error}</Message>
+      ) : (
+        renderProductDetail
+      )}
+    </>
+  )
 }
 
 export default ProductScreen
